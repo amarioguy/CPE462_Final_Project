@@ -15,30 +15,20 @@
 //
 // gif-h library, this is public domain software, available here: https://github.com/charlietangora/gif-h
 //
-#include <gif.h>
-
-
-/*++
-   DELETEME when finished:
-   Project outline:
-   - Make this work with JPEGs and OpenCV first
-	 - loop code at speed (GIF max framerate is 50fps, we have 3 frames, base case is 1 frame per second)
-	 - command parsing
-	 - GIF conversion
---*/
+//#include <gif.h>
 
 /*++
   Resources used:
     OpenCV Mat type indexes: https://gist.github.com/yangcha/38f2fa630e223a8546f9b48ebbb3e61a
 	OpenCV documentation (both documentation and tutorials): https://docs.opencv.org/4.5.5/index.html
-	gif-h library: https://github.com/charlietangora/gif-h
+	gif-h library: https://github.com/charlietangora/gif-h (while attempting to create GIFs)
 	Getting a file extension in C++: https://stackoverflow.com/questions/5309471/getting-file-extension-in-c
 
 --*/
 
 typedef enum {
 	MODE_COLOR_WHEEL = 0,
-	MODE_GIF_OUTPUT,
+	//MODE_GIF_OUTPUT,
 	MODE_MAX,
 	MODE_UNKNOWN = 0xFFFFFFFF
 } img_mode;
@@ -46,9 +36,9 @@ typedef enum {
 using namespace cv; // makes it so any OpenCV methods do not need to be prefixed with "cv::"
 
 void print_help() {
-	printf("CPE462_Project.exe [color_wheel/convert_to_gif]\n");
+	printf("CPE462_Project.exe [color_wheel]\n");
 	printf("Options for color_wheel mode: \n[angle_to_rotate_by_as_an_integer] [equalize_histogram]\n");
-	printf("Options for convert_to_gif_mode: [input_img_1] [input_img_2] [input_img_3]\n");
+	//printf("Options for convert_to_gif_mode: [input_img_1] [input_img_2] [input_img_3]\n");
 	return;
 }
 
@@ -78,6 +68,7 @@ int main_color_wheel(int argc, char* argv[]) {
 	Mat hsv_rearranged_channels[3];
 	Point2f sourceTriangle[3];
 	Point2f destTriangle[3];
+	time_t second = time(NULL);
 	cv::Point center_img;
 	cv::String in_string; // input string
 	const cv::String out_string_1 = "out_1.jpg";
@@ -87,7 +78,8 @@ int main_color_wheel(int argc, char* argv[]) {
 	const cv::String out_ch_string_2 = "out_ch_2.jpg";
 	const cv::String out_ch_string_3 = "out_ch_3.jpg";
 	const cv::String out_string_mixed = "out_mixed.jpg";
-	const cv::String out_gif_string = "out_gif.gif";
+	const cv::String hsv_out_string_mixed = "hsv_out_mixed.jpg";
+	const char *out_gif_string = "out_gif.gif";
 	bool do_histogram_equalization = false; //do not do histogram equalization by default.
 	bool mix_colors = false; // default to not mixing colors
 	bool was_any_transform_done = false; // need to check if any transforms are done to image to choose whether to apply a transformation to original input or to the current running output.
@@ -96,10 +88,13 @@ int main_color_wheel(int argc, char* argv[]) {
 	//
 	// Sanity check the arguments for color wheel mode
 	//
+	// Seed RNG as well
+	//
+	srand(second);
 	if (argc < 3) {
 		// less than 3 arguments means we DEFINITELY didn't get an input image, error out immediately.
 		printf("Error: not enough arguments!\n");
-		//print_help();
+		print_help();
 		return -1;
 	}
 	//
@@ -116,10 +111,6 @@ int main_color_wheel(int argc, char* argv[]) {
 		return -1;
 	}
 	in_string = (cv::String)argv[2];
-
-	//
-	// Optional command parsing disabled for now.
-	// 
 	
 	//
 	// Warning: due to time constraints, I couldn't account for all of the undefined behavior here, 
@@ -131,7 +122,7 @@ int main_color_wheel(int argc, char* argv[]) {
 			try {
 				// custom angle is specified, set it.
 				printf("Info: setting rotation angle\n");
-				rotation_angle = stoi(argv[3]);	
+				rotation_angle = atoi(argv[3]);	
 			}
 			catch (std::invalid_argument const& ex) {
 				printf("Error: Third argument is not an integer\n");
@@ -201,7 +192,7 @@ int main_color_wheel(int argc, char* argv[]) {
 	//
 	// extract the image channels, and dump them out to the disk as JPG.
 	//
-	cv::split(image_out_temp, channel_out);
+	cv::split(((was_any_transform_done == true) ? image_out_temp : image_in), channel_out);
 
 	cv::imwrite(out_ch_string_1, channel_out[0]);
 	cv::imwrite(out_ch_string_2, channel_out[1]);
@@ -220,9 +211,6 @@ int main_color_wheel(int argc, char* argv[]) {
 	//
 	// apply colormaps to the channels.
 	//
-
-
-	printf("type: %d\n", channel_out[0].type());
 
 
 	cv::applyColorMap(channel_out[0], hsv_channel_out[0], COLORMAP_HSV);
@@ -244,46 +232,47 @@ int main_color_wheel(int argc, char* argv[]) {
 			rearranged_channels[0] = channel_out[0];
 			rearranged_channels[1] = channel_out[2];
 			rearranged_channels[2] = channel_out[1];
-			hsv_rearranged_channels[0] = hsv_channel_out[0];
-			hsv_rearranged_channels[1] = hsv_channel_out[2];
-			hsv_rearranged_channels[2] = hsv_channel_out[1];
 			break;
 		case 1:
 			rearranged_channels[0] = channel_out[1];
 			rearranged_channels[1] = channel_out[2];
 			rearranged_channels[2] = channel_out[0];
-			hsv_rearranged_channels[0] = hsv_channel_out[1];
-			hsv_rearranged_channels[1] = hsv_channel_out[2];
-			hsv_rearranged_channels[2] = hsv_channel_out[0];
 			break;
 		case 2:
 			rearranged_channels[0] = channel_out[2];
 			rearranged_channels[1] = channel_out[0];
 			rearranged_channels[2] = channel_out[1];
-			hsv_rearranged_channels[0] = hsv_channel_out[2];
-			hsv_rearranged_channels[1] = hsv_channel_out[0];
-			hsv_rearranged_channels[2] = hsv_channel_out[1];
+			break;
 	}
 
-	cv::merge(rearranged_channels, mixed_image_out);
-	cv::merge(hsv_rearranged_channels, hsv_mixed_image_out);
+	cv::merge(rearranged_channels, 3, mixed_image_out);
+	cv::imwrite(out_string_mixed, mixed_image_out);
+
 	//
-	// Combine the frames into a GIF.
+	// Write the GIF - scrapped
 	//
-	// TODO: this. 
+	//GifWriter writer = {};
+	//GifBegin(&writer, out_gif_string, image_in.cols, image_in.rows, 333);
+	//for (int i = 0; i < 3; i++) {
+	//	unsigned char* image_out = channel_out[i].data;
+	//	GifWriteFrame(&writer, image_out, channel_out[i].cols, channel_out[i].rows, 333);
+	//}
+	//GifEnd(&writer);
 	return 0;
 
 }
 
-int main_convert_to_gif(int argc, char*argv[]) {
-	Mat image_1_in, image_2_in, image_3_in;
-	int image_1[][];
-	int image_2[][];
-	int image_3[][];
-	//
-	// Notes before grinding:
-	//   one image is required to make a static gif
-}
+//int main_convert_to_gif(int argc, char*argv[]) {
+//	Mat image_1_in, image_2_in, image_3_in;
+//	int image_1[][];
+//	int image_2[][];
+//	int image_3[][];
+//	//
+//	// Notes before grinding:
+//	//   one image is required to make a static gif
+//	//   presence of two or three images implies an animated gif
+//	//
+//}
 
 //
 // CLI syntax *should* be this:
@@ -297,7 +286,7 @@ int main(int argc, char *argv[])
 
 	//
 	// Mode selector:
-	// Valid modes are 'color_wheel' and 'output_as_gif for now.
+	// Only valid mode is 'color_wheel' for now.
 	//
 	// If we don't have a valid mode selected, since mode is default set to UNKNOWN, exit once we check for modes.
 	//
@@ -306,16 +295,19 @@ int main(int argc, char *argv[])
 	//   image filtering, etc. (The other modes are basically helpers to convert images as needed)
 	//   
 	//   Output as GIF: Takes as input one to three images (the frames as JPG) and outputs the GIF of those three frames at a 
-	//   specified frame rate.
+	//   specified frame rate. (Shelved)
 	//
 	//
 	
 	if (strncmp(argv[1], "color_wheel", 11) == 0) {
 		mode = MODE_COLOR_WHEEL;
 	}
-	else if (strncmp(argv[1], "output_as_gif", 13) == 0) {
-		mode = MODE_GIF_OUTPUT;
-	}
+	//
+	// shelved until the future.
+	// 
+	//else if (strncmp(argv[1], "output_as_gif", 13) == 0) {
+	//	mode = MODE_GIF_OUTPUT;
+	//}
 
 	//
 	// Check our running mode at this point. If unknown, exit.
@@ -323,16 +315,16 @@ int main(int argc, char *argv[])
 	switch (mode) {
 		case MODE_UNKNOWN:
 		default:
-			printf("Error: Unknown running mode specified! Valid modes are [color_wheel, output_as_gif, convert_raw]\n");
-			//print_help();
+			printf("Error: Unknown running mode specified! Valid modes are [color_wheel]\n");
+			print_help();
 			break;
 		case MODE_COLOR_WHEEL:
 			printf("Running in color wheel mode\n");
 			ret = main_color_wheel(argc, argv);
 			break;
-		case MODE_GIF_OUTPUT:
-			printf("Converting images to GIF\n");
-			ret = main_convert_to_gif();
+		//case MODE_GIF_OUTPUT:
+		//	printf("Converting images to GIF\n");
+		//	//ret = main_convert_to_gif(argc, argv);
 
 	}
 
