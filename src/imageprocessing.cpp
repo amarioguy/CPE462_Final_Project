@@ -45,7 +45,12 @@ typedef enum {
 
 using namespace cv; // makes it so any OpenCV methods do not need to be prefixed with "cv::"
 
-
+void print_help() {
+	printf("CPE462_Project.exe [color_wheel/convert_to_gif]\n");
+	printf("Options for color_wheel mode: \n[angle_to_rotate_by_as_an_integer] [equalize_histogram]\n");
+	printf("Options for convert_to_gif_mode: [input_img_1] [input_img_2] [input_img_3]\n");
+	return;
+}
 
 
 //
@@ -54,7 +59,6 @@ using namespace cv; // makes it so any OpenCV methods do not need to be prefixed
 //   angle - how many degrees counter-clockwise you want to rotate the image. Optional, will be 0 unless specified
 //   equalize_histogram - do histogram equalization on the image before creating the output images. 
 //   Optional, ignored if incorrect.
-//   framerate - must be a number between 1 and 50 (units are frames per second). Optional, defaults to 1.
 // 
 // Assumptions:
 //   The image is 3 channels (color space is NOT assumed)
@@ -88,7 +92,6 @@ int main_color_wheel(int argc, char* argv[]) {
 	bool mix_colors = false; // default to not mixing colors
 	bool was_any_transform_done = false; // need to check if any transforms are done to image to choose whether to apply a transformation to original input or to the current running output.
 	unsigned int rotation_angle = 0; //default to keeping image angle as is.
-	unsigned int framerate = 1; //leave it as 1 frame per second.
 	char* input_file_ext;
 	//
 	// Sanity check the arguments for color wheel mode
@@ -132,7 +135,7 @@ int main_color_wheel(int argc, char* argv[]) {
 			}
 			catch (std::invalid_argument const& ex) {
 				printf("Error: Third argument is not an integer\n");
-				//print_help();
+				print_help();
 				return -1;
 			}
 		}
@@ -140,18 +143,22 @@ int main_color_wheel(int argc, char* argv[]) {
 			printf("Info: doing histogram equalization\n");
 			do_histogram_equalization = true;
 		}
-		if (strncmp(argv[5], "0", 1) != 0) {
-			try {
-				// custom framerate is specified, set it.
-				printf("Info: setting rotation angle\n");
-				framerate = stoi(argv[5]);	
-			}
-			catch (std::invalid_argument const& ex) {
-				printf("Error: Fifth argument is not an integer\n");
-				//print_help();
-				return -1;
-			}
-		}
+		//
+		// framerate control is scrapped until a future iteration.
+		//
+
+		// if (strncmp(argv[5], "0", 1) != 0) {
+		// 	try {
+		// 		// custom framerate is specified, set it.
+		// 		printf("Info: setting rotation angle\n");
+		// 		framerate = stoi(argv[5]);	
+		// 	}
+		// 	catch (std::invalid_argument const& ex) {
+		// 		printf("Error: Fifth argument is not an integer\n");
+		// 		//print_help();
+		// 		return -1;
+		// 	}
+		// }
 		
 	}
 
@@ -163,6 +170,7 @@ int main_color_wheel(int argc, char* argv[]) {
 
 	//
 	// The test vector is a BGR8 image, no alpha channel, note that the results of the following might change dependent on source image's color space.
+	//
 	
 	//
 	// Orient the image as needed. (To keep the code simple, this must always remain the first transform)
@@ -262,9 +270,19 @@ int main_color_wheel(int argc, char* argv[]) {
 	//
 	// Combine the frames into a GIF.
 	//
-
+	// TODO: this. 
 	return 0;
 
+}
+
+int main_convert_to_gif(int argc, char*argv[]) {
+	Mat image_1_in, image_2_in, image_3_in;
+	int image_1[][];
+	int image_2[][];
+	int image_3[][];
+	//
+	// Notes before grinding:
+	//   one image is required to make a static gif
 }
 
 //
@@ -314,7 +332,7 @@ int main(int argc, char *argv[])
 			break;
 		case MODE_GIF_OUTPUT:
 			printf("Converting images to GIF\n");
-			//ret = main_convert_to_gif();
+			ret = main_convert_to_gif();
 
 	}
 
